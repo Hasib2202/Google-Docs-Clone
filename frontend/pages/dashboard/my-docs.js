@@ -17,9 +17,7 @@ export default function MyDocs() {
     const fetchDocuments = async () => {
       try {
         // Determine API URL based on environment
-        const apiUrl = process.env.NODE_ENV === 'development'
-          ? '/api/documents/my-docs'
-          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/my-docs`;
+        const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/my-docs`;
 
         const res = await axios.get(apiUrl, { withCredentials: true });
         setDocs(res.data);
@@ -40,9 +38,7 @@ export default function MyDocs() {
 
     try {
       // Determine API URL based on environment
-      const apiUrl = process.env.NODE_ENV === 'development'
-        ? '/api/documents'
-        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents`;
 
       const res = await axios.post(
         apiUrl,
@@ -68,9 +64,7 @@ export default function MyDocs() {
 
     try {
       // Determine API URL based on environment
-      const apiUrl = process.env.NODE_ENV === 'development'
-        ? `/api/documents/${id}`
-        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${id}`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${id}`;
 
       await axios.delete(apiUrl, { withCredentials: true });
 
