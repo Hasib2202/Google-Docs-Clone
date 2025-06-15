@@ -208,21 +208,25 @@ io.on('connection', (socket) => {
 });
 
 // Database connection and server startup
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('MongoDB connected successfully');
+console.log('Connecting to MongoDB...');
+mongoose.connect(process.env.MONGO_URI);
+
+mongoose.connection.on('error', err => {
+  console.error('❌ MongoDB connection error:', err.message);
+  process.exit(1);
+});
+
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB connected successfully');
   
   server.listen(PORT, HOST, () => {
-    console.log(`Server running on http://${HOST}:${PORT}`);
-    console.log(`Socket.IO connected to ${cleanFrontendUrl}`);
+    console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+    console.log(`🔌 Socket.IO connected to ${cleanFrontendUrl}`);
   });
-})
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('⚠️ MongoDB disconnected');
 });
 
 // Graceful shutdown
