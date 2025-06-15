@@ -267,7 +267,8 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
                           <div className="flex items-center justify-center w-10 h-10 mr-3 text-white bg-blue-500 rounded-full">
                             {collab.user.avatar ? (
                               <img
-                                src={`http://localhost:5000/uploads/avatars/${collab.user.avatar}`}
+                                // FIXED: Use environment variable for avatar URL
+                                src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${collab.user.avatar}`}
                                 alt={collab.user.name}
                                 className="object-cover w-full h-full rounded-full"
                               />
