@@ -6,7 +6,9 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
-const cookie = require('cookie'); // Added for cookie parsing
+const cookie = require('cookie');
+const fs = require('fs');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const documentRoutes = require('./routes/documents');
@@ -14,64 +16,114 @@ const documentRoutes = require('./routes/documents');
 const app = express();
 const server = http.createServer(app);
 
-// Critical configuration
+// ========== CRITICAL CONFIGURATION ========== //
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0'; // Required for Render
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://google-docs-clone-mu-henna.vercel.app";
 
-// Remove any trailing slash from frontend URL
-const cleanFrontendUrl = FRONTEND_URL.endsWith('/') 
-  ? FRONTEND_URL.slice(0, -1) 
-  : FRONTEND_URL;
+// Process environment variables
+const FRONTEND_URL = (process.env.FRONTEND_URL || "https://google-docs-clone-ochre-two.vercel.app").replace(/\/$/, "");
+const allowedOrigins = [
+  FRONTEND_URL,
+  "http://localhost:3000"  // Development environment
+];
 
-// Startup logs for debugging
-console.log('Starting server with configuration:');
-console.log('PORT:', PORT);
-console.log('HOST:', HOST);
-console.log('FRONTEND_URL:', cleanFrontendUrl);
-console.log('MONGO_URI:', process.env.MONGO_URI ? '***masked***' : 'not set');
+// ========== STARTUP LOGS ========== //
+console.log('🚀 Starting server with configuration:');
+console.log('📍 PORT:', PORT);
+console.log('🌐 HOST:', HOST);
+console.log('🔗 FRONTEND_URL:', FRONTEND_URL);
+console.log('✅ Allowed Origins:', allowedOrigins);
+console.log('🗄️ MONGO_URI:', process.env.MONGO_URI ? '***masked***' : 'not set');
+console.log('🔒 JWT_SECRET:', process.env.JWT_SECRET ? '***masked***' : 'not set');
 
-// Socket.IO configuration
-const io = socketIo(server, {
-  cors: {
-    origin: cleanFrontendUrl,
-    methods: ["GET", "POST"],
-    credentials: true
+// ========== FILE UPLOAD SETUP ========== //
+const UPLOAD_DIR = 'uploads';
+const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars');
+
+// Ensure both directories exist
+[UPLOAD_DIR, AVATAR_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`📂 Created directory: ${path.resolve(dir)}`);
   }
 });
 
-// CORS Middleware
-app.use(cors({ 
-  origin: cleanFrontendUrl,
-  credentials: true 
+// ========== STATIC FILE SERVING ========== //
+const staticOptions = {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    const ext = path.extname(filePath);
+    if (ext === '.png') {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      res.setHeader('Content-Type', 'image/jpeg');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
+};
+
+app.use('/uploads', express.static(path.resolve(UPLOAD_DIR), staticOptions));
+
+// ========== MIDDLEWARE SETUP ========== //
+// Enhanced CORS handling
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow all origins in development
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Production: check allowed origins
+    const allowedOrigins = [
+      "https://google-docs-clone-ochre-two.vercel.app",
+      "https://google-docs-clone-mu-henna.vercel.app"
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  exposedHeaders: ['Content-Disposition']
 }));
 
-// Other middleware
-app.use(express.json());
+// Body parsing with increased limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// ========== ROUTES ========== //
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 app.use("/uploads", express.static("uploads"));
 
-// Health check endpoint
+// ========== HEALTH ENDPOINTS ========== //
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date(),
-    dbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    dbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    version: '1.0.0'
   });
 });
 
-// Home endpoint
 app.get('/', (req, res) => res.send('Google Docs MVP API'));
 
-// Socket.IO for real-time collaboration
+// ========== SOCKET.IO SETUP ========== //
+const io = socketIo(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+    transports: ['websocket', 'polling']
+  },
+  allowEIO3: true // For older clients
+});
+
 const documentRooms = new Map();
 
-// Document room management helper
 function getOrCreateRoom(documentId) {
   if (!documentRooms.has(documentId)) {
     documentRooms.set(documentId, {
@@ -82,10 +134,9 @@ function getOrCreateRoom(documentId) {
   return documentRooms.get(documentId);
 }
 
-// Socket.IO authentication middleware
+// Socket.IO authentication
 io.use((socket, next) => {
   try {
-    // Extract token from handshake auth or cookies
     let token = socket.handshake.auth.token;
     
     if (!token && socket.handshake.headers.cookie) {
@@ -94,7 +145,7 @@ io.use((socket, next) => {
     }
 
     if (!token) {
-      console.warn('Authentication failed: No token provided');
+      console.warn('🔐 Authentication failed: No token provided');
       return next(new Error('Authentication error'));
     }
 
@@ -102,48 +153,44 @@ io.use((socket, next) => {
     socket.userId = decoded.id;
     next();
   } catch (err) {
-    console.error('JWT verification error:', err.message);
+    console.error('❌ JWT verification error:', err.message);
     return next(new Error('Authentication error'));
   }
 });
 
 // Socket.IO event handlers
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.userId);
+  console.log('🟢 New client connected:', socket.userId);
   
   socket.on('error', (error) => {
-    console.error('Socket error:', error);
+    console.error('🔌 Socket error:', error);
   });
 
-  // Join document room
   socket.on('join-document', async (documentId) => {
     try {
       const User = require('./models/User');
       const user = await User.findById(socket.userId).select('name avatar');
       
       if (!user) {
-        console.warn(`User not found: ${socket.userId}`);
+        console.warn(`👤 User not found: ${socket.userId}`);
         return;
       }
       
       socket.join(documentId);
       const room = getOrCreateRoom(documentId);
       
-      // Add user to room
       room.users.set(socket.id, {
         id: socket.userId,
         name: user.name,
         avatar: user.avatar
       });
       
-      // Notify others about new user
       socket.to(documentId).emit('user-joined', {
         id: socket.userId,
         name: user.name,
         avatar: user.avatar
       });
       
-      // Send current users and content to new user
       const users = Array.from(room.users.values());
       socket.emit('current-users', users);
       
@@ -151,16 +198,15 @@ io.on('connection', (socket) => {
         socket.emit('document-update', room.content);
       }
     } catch (err) {
-      console.error('Error joining document:', err);
+      console.error('❌ Error joining document:', err);
     }
   });
   
-  // Handle document changes
   socket.on('document-change', (data) => {
     const { documentId, content } = data;
     
     if (!documentRooms.has(documentId)) {
-      console.warn(`Document room not found: ${documentId}`);
+      console.warn(`📄 Document room not found: ${documentId}`);
       return;
     }
     
@@ -169,7 +215,6 @@ io.on('connection', (socket) => {
     socket.to(documentId).emit('document-update', content);
   });
   
-  // Handle user leaving
   socket.on('leave-document', (documentId) => {
     socket.leave(documentId);
     
@@ -179,20 +224,17 @@ io.on('connection', (socket) => {
         room.users.delete(socket.id);
         socket.to(documentId).emit('user-left', socket.userId);
         
-        // Clean up room if empty
         if (room.users.size === 0) {
           documentRooms.delete(documentId);
-          console.log(`Room ${documentId} cleaned up`);
+          console.log(`🧹 Room ${documentId} cleaned up`);
         }
       }
     }
   });
   
-  // Handle disconnection
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.userId);
+    console.log('🔴 Client disconnected:', socket.userId);
     
-    // Remove user from all rooms
     documentRooms.forEach((room, documentId) => {
       if (room.users.has(socket.id)) {
         room.users.delete(socket.id);
@@ -200,16 +242,20 @@ io.on('connection', (socket) => {
         
         if (room.users.size === 0) {
           documentRooms.delete(documentId);
-          console.log(`Room ${documentId} cleaned up after disconnect`);
+          console.log(`🧹 Room ${documentId} cleaned up after disconnect`);
         }
       }
     });
   });
 });
 
-// Database connection and server startup
-console.log('Connecting to MongoDB...');
-mongoose.connect(process.env.MONGO_URI);
+// ========== DATABASE & SERVER STARTUP ========== //
+console.log('🔌 Connecting to MongoDB...');
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000
+});
 
 mongoose.connection.on('error', err => {
   console.error('❌ MongoDB connection error:', err.message);
@@ -221,7 +267,7 @@ mongoose.connection.on('connected', () => {
   
   server.listen(PORT, HOST, () => {
     console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-    console.log(`🔌 Socket.IO connected to ${cleanFrontendUrl}`);
+    console.log(`🔌 Socket.IO connected to origins:`, allowedOrigins);
   });
 });
 
@@ -229,12 +275,17 @@ mongoose.connection.on('disconnected', () => {
   console.warn('⚠️ MongoDB disconnected');
 });
 
-// Graceful shutdown
+// ========== GRACEFUL SHUTDOWN ========== //
 process.on('SIGINT', () => {
-  console.log('Shutting down server');
+  console.log('🛑 Shutting down server');
   server.close(() => {
     mongoose.disconnect();
-    console.log('Server stopped');
+    console.log('✅ Server stopped');
     process.exit(0);
   });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception:', err);
+  process.exit(1);
 });

@@ -16,11 +16,17 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/user", {
+        // Determine API URL based on environment
+        const apiUrl = process.env.NODE_ENV === 'development'
+          ? '/api/auth/user'
+          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/user`;
+
+        const res = await axios.get(apiUrl, {
           withCredentials: true,
         });
         setUser(res.data);
       } catch (err) {
+        console.error("User fetch error:", err.response?.data || err.message);
         router.push("/auth/login");
       } finally {
         setIsLoading(false);
@@ -34,12 +40,16 @@ export default function Dashboard() {
     if (user) {
       const fetchSharedDocuments = async () => {
         try {
-          const res = await axios.get(
-            "http://localhost:5000/api/documents/shared",
-            { withCredentials: true }
-          );
+          // Determine API URL based on environment
+          const apiUrl = process.env.NODE_ENV === 'development'
+            ? '/api/documents/shared'
+            : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/shared`;
+
+          const res = await axios.get(apiUrl, {
+            withCredentials: true
+          });
           setSharedDocuments(res.data);
-          
+
           // Get stored count from localStorage or set initial count
           const storedCount = localStorage.getItem(`sharedDocsCount_${user._id}`);
           if (storedCount === null) {
@@ -54,7 +64,10 @@ export default function Dashboard() {
             setNotificationCount(newDocsCount > 0 ? newDocsCount : 0);
           }
         } catch (err) {
-          console.error("Failed to fetch shared documents", err);
+          console.error("Failed to fetch shared documents", {
+            error: err.response?.data || err.message,
+            status: err.response?.status
+          });
         } finally {
           setIsLoadingShared(false);
         }
@@ -65,14 +78,22 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
+      // Determine API URL based on environment
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? '/api/auth/logout'
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/logout`;
+
       await axios.post(
-        "http://localhost:5000/api/auth/logout",
+        apiUrl,
         {},
         { withCredentials: true }
       );
       router.push("/auth/login");
     } catch (err) {
-      console.error("Logout failed", err);
+      console.error("Logout failed", {
+        error: err.response?.data || err.message,
+        status: err.response?.status
+      });
     }
   };
 
@@ -87,10 +108,10 @@ export default function Dashboard() {
       localStorage.setItem(`sharedDocsCount_${user._id}`, sharedDocuments.length.toString());
       setPreviousSharedCount(sharedDocuments.length);
     }
-    
+
     // Scroll to shared documents section
     if (sharedSectionRef.current) {
-      sharedSectionRef.current.scrollIntoView({ 
+      sharedSectionRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });

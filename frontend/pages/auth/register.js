@@ -35,13 +35,31 @@ export default function RegisterPage() {
     formData.append("password", form.password);
     formData.append("avatar", avatar);
 
+    // try {
+    //   await axios.post("http://localhost:5000/api/auth/register", formData, {
+    //     headers: { "Content-Type": "multipart/form-data" },
+    //   });
+    //   toast.success("Registered successfully!");
+    //   router.push("/auth/login");
+    // } catch (err) {
+    //   toast.error(err.response?.data?.msg || "Registration failed");
+    // }
+
     try {
-      await axios.post("http://localhost:5000/api/auth/register", formData, {
+      // Use relative path in development, full URL in production
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? '/api/auth/register'
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/register`;
+
+      await axios.post(apiUrl, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true
       });
+
       toast.success("Registered successfully!");
       router.push("/auth/login");
     } catch (err) {
+      console.error("Registration error:", err);
       toast.error(err.response?.data?.msg || "Registration failed");
     }
   };
@@ -72,7 +90,7 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 value={form.name}
                 onChange={handleChange}
-                
+
                 className="w-full px-4 py-2 mt-1 transition border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               />
             </div>
@@ -87,7 +105,7 @@ export default function RegisterPage() {
                 placeholder="you@example.com"
                 value={form.email}
                 onChange={handleChange}
-                
+
                 className="w-full px-4 py-2 mt-1 transition border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               />
             </div>
@@ -102,7 +120,7 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 value={form.password}
                 onChange={handleChange}
-                
+
                 className="w-full px-4 py-2 mt-1 transition border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               />
             </div>
@@ -115,7 +133,7 @@ export default function RegisterPage() {
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
-                
+
                 className="w-full px-4 py-2 mt-1 transition border border-gray-300 rounded-lg shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
               />
             </div>

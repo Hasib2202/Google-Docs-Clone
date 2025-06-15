@@ -14,17 +14,30 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post("http://localhost:5000/api/auth/login", form, {
-        withCredentials: true,
-      });
-      toast.success("Login successful!");
-      router.push("/dashboard/dashboard");
-    } catch (err) {
-      toast.error(err.response?.data?.msg || "Login failed");
-    }
-  };
+  e.preventDefault();
+  try {
+    // Determine API URL based on environment
+    const apiUrl = process.env.NODE_ENV === 'development' 
+      ? '/api/auth/login'
+      : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login`;
+
+    await axios.post(apiUrl, form, {
+      withCredentials: true, // Crucial for cookies
+    });
+    
+    toast.success("Login successful!");
+    router.push("/dashboard/dashboard");
+  } catch (err) {
+    // Enhanced error logging
+    console.error("Login error:", {
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message
+    });
+    
+    toast.error(err.response?.data?.msg || "Login failed");
+  }
+};
 
   return (
     <>

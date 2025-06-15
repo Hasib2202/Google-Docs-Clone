@@ -16,13 +16,18 @@ export default function MyDocs() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/documents/my-docs",
-          { withCredentials: true }
-        );
+        // Determine API URL based on environment
+        const apiUrl = process.env.NODE_ENV === 'development'
+          ? '/api/documents/my-docs'
+          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/my-docs`;
+
+        const res = await axios.get(apiUrl, { withCredentials: true });
         setDocs(res.data);
       } catch (err) {
-        console.error("Failed to fetch documents", err);
+        console.error("Failed to fetch documents", {
+          error: err.response?.data || err.message,
+          status: err.response?.status
+        });
       } finally {
         setIsLoading(false);
       }
@@ -32,38 +37,60 @@ export default function MyDocs() {
 
   const createDocument = async () => {
     if (!newTitle.trim()) return;
+
     try {
+      // Determine API URL based on environment
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? '/api/documents'
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents`;
+
       const res = await axios.post(
-        "http://localhost:5000/api/documents",
+        apiUrl,
         { title: newTitle, content: "" },
         { withCredentials: true }
       );
+
       setDocs([res.data, ...docs]);
       setNewTitle("");
       setShowCreateModal(false);
       router.push(`/document/${res.data._id}`);
     } catch (err) {
-      console.error("Failed to create document", err);
+      console.error("Failed to create document", {
+        error: err.response?.data || err.message,
+        status: err.response?.status
+      });
+      toast.error("Failed to create document. Please try again.");
     }
   };
 
   const deleteDocument = async (id) => {
-  if (!confirm("Are you sure you want to delete this document?")) return;
-  try {
-    await axios.delete(`http://localhost:5000/api/documents/${id}`, {
-      withCredentials: true,
-    });
-    setDocs(docs.filter((d) => d._id !== id));
-    toast.success("Document deleted successfully");
-  } catch (err) {
-    if (err.response?.status === 403) {
-      toast.error("You are not the owner. You can't delete this document.");
-    } else {
-      toast.error("Failed to delete document.");
+    if (!confirm("Are you sure you want to delete this document?")) return;
+
+    try {
+      // Determine API URL based on environment
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? `/api/documents/${id}`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${id}`;
+
+      await axios.delete(apiUrl, { withCredentials: true });
+
+      setDocs(docs.filter((d) => d._id !== id));
+      toast.success("Document deleted successfully");
+    } catch (err) {
+      const errorData = {
+        status: err.response?.status,
+        message: err.response?.data?.msg || err.message
+      };
+
+      console.error("Failed to delete document", errorData);
+
+      if (errorData.status === 403) {
+        toast.error("You are not the owner. You can't delete this document.");
+      } else {
+        toast.error(errorData.message || "Failed to delete document.");
+      }
     }
-    console.error("Failed to delete document", err);
-  }
-};
+  };
 
   if (isLoading) {
     return (
@@ -236,7 +263,7 @@ export default function MyDocs() {
                           ? new Date(doc.updatedAt).toLocaleDateString()
                           : "N/A"}
                       </span>
-                      
+
                       <div className="px-2 py-1 text-xs text-blue-800 bg-blue-100 rounded-full">
                         {doc.owner?.name || "You"}
                       </div>

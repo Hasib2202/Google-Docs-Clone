@@ -15,16 +15,34 @@ export default function ProfileUpdate() {
   const router = useRouter();
 
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/auth/user", { withCredentials: true })
-      .then((res) => {
+    const fetchUser = async () => {
+      try {
+        // Determine API URL based on environment
+        const apiUrl = process.env.NODE_ENV === 'development'
+          ? '/api/auth/user'
+          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/user`;
+
+        const res = await axios.get(apiUrl, { withCredentials: true });
+
         setUser(res.data);
         setForm({ name: res.data.name, password: "" });
-        setAvatarPreview(
-          `http://localhost:5000/uploads/avatars/${res.data.avatar}`
-        );
-      })
-      .catch(() => router.push("/auth/login"));
+
+        // Determine avatar URL based on environment
+        const avatarBaseUrl = process.env.NODE_ENV === 'development'
+          ? 'http://localhost:5000'
+          : process.env.NEXT_PUBLIC_BACKEND_URL;
+
+        setAvatarPreview(`${avatarBaseUrl}/uploads/avatars/${res.data.avatar}`);
+      } catch (err) {
+        console.error("User fetch error:", {
+          error: err.response?.data || err.message,
+          status: err.response?.status
+        });
+        router.push("/auth/login");
+      }
+    };
+
+    fetchUser();
   }, [router]);
 
   const handleChange = (e) => {
@@ -179,11 +197,10 @@ export default function ProfileUpdate() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className={`flex-1 py-3 px-6 rounded-lg font-medium flex items-center justify-center transition ${
-                      isLoading
+                    className={`flex-1 py-3 px-6 rounded-lg font-medium flex items-center justify-center transition ${isLoading
                         ? "bg-indigo-400 cursor-not-allowed"
                         : "bg-indigo-600 hover:bg-indigo-700"
-                    } text-white shadow-md hover:shadow-lg`}
+                      } text-white shadow-md hover:shadow-lg`}
                   >
                     {isLoading ? (
                       <>
@@ -238,16 +255,16 @@ export default function ProfileUpdate() {
                     <p className="font-medium">
                       {user?.createdAt
                         ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
                         : "loading..."}
                     </p>
                   </div>
                 </div>
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -257,6 +274,6 @@ export default function ProfileUpdate() {
         </footer>
       </div>
     </div>
-    
+
   );
 }

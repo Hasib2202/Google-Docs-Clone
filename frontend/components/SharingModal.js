@@ -15,17 +15,103 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
     }
   }, [documentId, isOwner]);
 
+  // const fetchCollaborators = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await axios.get(
+  //       `http://localhost:5000/api/documents/${documentId}/collaborators`,
+  //       { withCredentials: true }
+  //     );
+  //     setCollaborators(response.data);
+  //     setLoading(false);
+  //   } catch (err) {
+  //     setError('Failed to fetch collaborators');
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const addCollaborator = async () => {
+  //   if (!email.trim()) {
+  //     setError('Email is required');
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     setError('');
+  //     setSuccess('');
+
+  //     await axios.post(
+  //       `http://localhost:5000/api/documents/${documentId}/share`,
+  //       { email, role },
+  //       { withCredentials: true }
+  //     );
+
+  //     setEmail('');
+  //     setRole('editor');
+  //     setSuccess('Collaborator added successfully');
+  //     fetchCollaborators();
+  //   } catch (err) {
+  //     setError(err.response?.data?.msg || 'Failed to add collaborator');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const updateRole = async (userId, newRole) => {
+  //   try {
+  //     setLoading(true);
+  //     setError('');
+  //     setSuccess('');
+
+  //     await axios.put(
+  //       `http://localhost:5000/api/documents/${documentId}/collaborators/${userId}`,
+  //       { role: newRole },
+  //       { withCredentials: true }
+  //     );
+
+  //     setSuccess('Role updated successfully');
+  //     fetchCollaborators();
+  //   } catch (err) {
+  //     setError(err.response?.data?.msg || 'Failed to update role');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const removeCollaborator = async (userId) => {
+  //   try {
+  //     setLoading(true);
+  //     setError('');
+  //     setSuccess('');
+
+  //     await axios.delete(
+  //       `http://localhost:5000/api/documents/${documentId}/collaborators/${userId}`,
+  //       { withCredentials: true }
+  //     );
+
+  //     setSuccess('Collaborator removed successfully');
+  //     fetchCollaborators();
+  //   } catch (err) {
+  //     setError(err.response?.data?.msg || 'Failed to remove collaborator');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchCollaborators = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/documents/${documentId}/collaborators`,
-        { withCredentials: true }
-      );
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? `/api/documents/${documentId}/collaborators`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}/collaborators`;
+
+      const response = await axios.get(apiUrl, { withCredentials: true });
       setCollaborators(response.data);
-      setLoading(false);
     } catch (err) {
       setError('Failed to fetch collaborators');
+      console.error('Fetch collaborators error:', err.response?.data);
+    } finally {
       setLoading(false);
     }
   };
@@ -41,8 +127,12 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
       setError('');
       setSuccess('');
 
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? `/api/documents/${documentId}/share`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}/share`;
+
       await axios.post(
-        `http://localhost:5000/api/documents/${documentId}/share`,
+        apiUrl,
         { email, role },
         { withCredentials: true }
       );
@@ -52,7 +142,9 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
       setSuccess('Collaborator added successfully');
       fetchCollaborators();
     } catch (err) {
-      setError(err.response?.data?.msg || 'Failed to add collaborator');
+      const errorMsg = err.response?.data?.msg || 'Failed to add collaborator';
+      setError(errorMsg);
+      console.error('Add collaborator error:', errorMsg, err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -64,8 +156,12 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
       setError('');
       setSuccess('');
 
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? `/api/documents/${documentId}/collaborators/${userId}`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}/collaborators/${userId}`;
+
       await axios.put(
-        `http://localhost:5000/api/documents/${documentId}/collaborators/${userId}`,
+        apiUrl,
         { role: newRole },
         { withCredentials: true }
       );
@@ -73,7 +169,9 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
       setSuccess('Role updated successfully');
       fetchCollaborators();
     } catch (err) {
-      setError(err.response?.data?.msg || 'Failed to update role');
+      const errorMsg = err.response?.data?.msg || 'Failed to update role';
+      setError(errorMsg);
+      console.error('Update role error:', errorMsg, err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -85,20 +183,22 @@ const SharingModal = ({ documentId, onClose, isOwner, currentUserId }) => {
       setError('');
       setSuccess('');
 
-      await axios.delete(
-        `http://localhost:5000/api/documents/${documentId}/collaborators/${userId}`,
-        { withCredentials: true }
-      );
+      const apiUrl = process.env.NODE_ENV === 'development'
+        ? `/api/documents/${documentId}/collaborators/${userId}`
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}/collaborators/${userId}`;
+
+      await axios.delete(apiUrl, { withCredentials: true });
 
       setSuccess('Collaborator removed successfully');
       fetchCollaborators();
     } catch (err) {
-      setError(err.response?.data?.msg || 'Failed to remove collaborator');
+      const errorMsg = err.response?.data?.msg || 'Failed to remove collaborator';
+      setError(errorMsg);
+      console.error('Remove collaborator error:', errorMsg, err.response?.data);
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow-xl">
