@@ -111,9 +111,9 @@ router.post("/login", async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        sameSite: "Lax", // or 'None' if cross-site
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
       })
       .json({
         token, // ✅ Return JWT token

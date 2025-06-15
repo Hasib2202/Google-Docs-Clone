@@ -178,12 +178,23 @@ export default function Dashboard() {
               {/* Profile Section */}
               <div className="md:col-span-1">
                 <div className="p-6 text-center text-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+
                   <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
                     {user.avatar ? (
                       <img
-                        src={`http://localhost:5000/uploads/avatars/${user.avatar}`}
+                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`}
                         alt="User Avatar"
                         className="object-cover w-full h-full"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.parentNode.innerHTML = `
+                            <div class="flex items-center justify-center w-full h-full bg-indigo-400">
+                              <span class="text-4xl font-bold text-white">
+                                ${user.name.charAt(0)}
+                              </span>
+                            </div>
+                          `;
+                        }}
                       />
                     ) : (
                       <div className="flex items-center justify-center w-full h-full bg-indigo-400">
