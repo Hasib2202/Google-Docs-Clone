@@ -22,9 +22,8 @@ export default function DocumentEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [showSharingModal, setShowSharingModal] = useState(false);
-  const [userRole, setUserRole] = useState('editor'); // 'owner', 'editor', or 'viewer'
-  const isOwner = userRole === 'owner'; // Derived state
-  // Compute read-only state
+  const [userRole, setUserRole] = useState('editor');
+  const isOwner = userRole === 'owner';
   const isReadOnly = userRole === 'viewer';
 
   // Fetch document data
@@ -33,14 +32,16 @@ export default function DocumentEditor() {
     
     const fetchDocument = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/documents/${documentId}`, {
-          withCredentials: true
-        });
+        // Fixed URL: Use environment variable
+        const res = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}`, 
+          { withCredentials: true }
+        );
+        
         setDocument(res.data);
         setTitle(res.data.title);
         setContent(res.data.content);
-        setUserRole(res.data.userRole); // Set user role from API response
-        console.log("User role set to:", res.data.userRole); // Debug log
+        setUserRole(res.data.userRole);
       } catch (err) {
         console.error('Failed to load document', err);
       }
@@ -53,41 +54,30 @@ export default function DocumentEditor() {
   useEffect(() => {
     if (!socket || !documentId) return;
     
-    // Connect to socket
     socket.connect();
-    
-    // Join document room
     socket.emit('join-document', documentId);
     
-    // Handle document updates from server
     const handleDocumentUpdate = (content) => {
       setContent(content);
     };
     
-    socket.on('document-update', handleDocumentUpdate);
-    
-    // Handle user presence updates
     const handleCurrentUsers = (users) => {
       setOnlineUsers(users);
     };
     
-    socket.on('current-users', handleCurrentUsers);
-    
-    // Handle new user joining
     const handleUserJoined = (user) => {
       setOnlineUsers(prev => [...prev, user]);
     };
     
-    socket.on('user-joined', handleUserJoined);
-    
-    // Handle user leaving
     const handleUserLeft = (userId) => {
       setOnlineUsers(prev => prev.filter(user => user.id !== userId));
     };
     
+    socket.on('document-update', handleDocumentUpdate);
+    socket.on('current-users', handleCurrentUsers);
+    socket.on('user-joined', handleUserJoined);
     socket.on('user-left', handleUserLeft);
     
-    // Clean up
     return () => {
       socket.emit('leave-document', documentId);
       socket.off('document-update', handleDocumentUpdate);
@@ -100,16 +90,11 @@ export default function DocumentEditor() {
   
   // Handle content changes
   const handleContentChange = (newContent) => {
-    if (isReadOnly) return; // Prevent changes in view mode
-    
+    if (isReadOnly) return;
     setContent(newContent);
     
-    // Send changes to server
     if (socket) {
-      socket.emit('document-change', {
-        documentId,
-        content: newContent
-      });
+      socket.emit('document-change', { documentId, content: newContent });
     }
   };
   
@@ -119,8 +104,9 @@ export default function DocumentEditor() {
     setIsSaving(true);
     
     try {
+      // Fixed URL: Use environment variable
       await axios.put(
-        `http://localhost:5000/api/documents/${documentId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/documents/${documentId}`,
         { title, content },
         { withCredentials: true }
       );
@@ -152,7 +138,6 @@ export default function DocumentEditor() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 py-4 mx-auto max-w-7xl sm:px-6">
           <div className="flex items-center">
@@ -176,7 +161,6 @@ export default function DocumentEditor() {
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* Online users */}
             <div className="flex -space-x-2">
               {onlineUsers.slice(0, 5).map((user) => (
                 <div 
@@ -185,10 +169,15 @@ export default function DocumentEditor() {
                   title={user.name}
                 >
                   {user.avatar ? (
+                    // Fixed avatar URL: Use environment variable
                     <img 
-                      src={`http://localhost:5000/uploads/avatars/${user.avatar}`} 
+                      src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}`} 
                       alt={user.name} 
                       className="object-cover w-full h-full rounded-full"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.parentElement.innerHTML = `<span>${user.name.charAt(0)}</span>`;
+                      }}
                     />
                   ) : (
                     <span>{user.name.charAt(0)}</span>
@@ -239,7 +228,6 @@ export default function DocumentEditor() {
         </div>
       </header>
 
-      {/* Editor */}
       <main className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {isReadOnly && (
           <div className="p-4 mb-4 border-l-4 border-yellow-400 bg-yellow-50">
@@ -282,12 +270,9 @@ export default function DocumentEditor() {
         <SharingModal 
           documentId={documentId} 
           onClose={() => setShowSharingModal(false)} 
-          isOwner={isOwner} // Pass isOwner to the modal
+          isOwner={isOwner}
         />
       )}
     </div>
   );
 }
-
-
-
