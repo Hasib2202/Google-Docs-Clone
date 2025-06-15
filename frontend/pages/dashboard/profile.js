@@ -18,10 +18,7 @@ export default function ProfileUpdate() {
     const fetchUser = async () => {
       try {
         // Determine API URL based on environment
-        const apiUrl = process.env.NODE_ENV === 'development'
-          ? '/api/auth/user'
-          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/user`;
-
+        const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/user`;
         const res = await axios.get(apiUrl, { withCredentials: true });
 
         setUser(res.data);
@@ -32,7 +29,10 @@ export default function ProfileUpdate() {
           ? 'http://localhost:5000'
           : process.env.NEXT_PUBLIC_BACKEND_URL;
 
-        setAvatarPreview(`${avatarBaseUrl}/uploads/avatars/${res.data.avatar}`);
+        // Fixed avatar URL construction
+        setAvatarPreview(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${res.data.avatar}`
+        );
       } catch (err) {
         console.error("User fetch error:", {
           error: err.response?.data || err.message,
@@ -74,7 +74,7 @@ export default function ProfileUpdate() {
 
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/update-profile",
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/update-profile`,
         formData,
         {
           withCredentials: true,
@@ -198,8 +198,8 @@ export default function ProfileUpdate() {
                     type="submit"
                     disabled={isLoading}
                     className={`flex-1 py-3 px-6 rounded-lg font-medium flex items-center justify-center transition ${isLoading
-                        ? "bg-indigo-400 cursor-not-allowed"
-                        : "bg-indigo-600 hover:bg-indigo-700"
+                      ? "bg-indigo-400 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-700"
                       } text-white shadow-md hover:shadow-lg`}
                   >
                     {isLoading ? (
