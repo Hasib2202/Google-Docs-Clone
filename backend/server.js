@@ -16,7 +16,8 @@ const server = http.createServer(app);
 // Create Socket.IO server with CORS configuration
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    //origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: "https://google-docs-clone-mu-henna.vercel.app/", 
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -24,7 +25,8 @@ const io = socketIo(server, {
 
 // Middleware
 app.use(cors({ 
-  origin: process.env.FRONTEND_URL || "http://localhost:3000", 
+  //origin: process.env.FRONTEND_URL || "http://localhost:3000", 
+  origin: "https://google-docs-clone-mu-henna.vercel.app/",
   credentials: true 
 }));
 app.use(express.json());
