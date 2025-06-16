@@ -182,9 +182,10 @@ export default function Dashboard() {
                   <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
                     {user.avatar ? (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`}
+                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${user.updatedAt}`}
                         alt="User Avatar"
                         className="object-cover w-full h-full"
+                        crossOrigin="anonymous"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.parentNode.innerHTML = `
