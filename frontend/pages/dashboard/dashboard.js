@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [isLoadingShared, setIsLoadingShared] = useState(true);
   const [previousSharedCount, setPreviousSharedCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarBlobUrl, setAvatarBlobUrl] = useState("");
   const router = useRouter();
   const sharedSectionRef = useRef(null);
 
@@ -25,10 +25,6 @@ export default function Dashboard() {
         const res = await axios.get(apiUrl, {
           withCredentials: true,
         });
-
-        console.log("User data from API:", res.data);
-        console.log("Avatar field:", res.data.avatar);
-        
         setUser(res.data);
       } catch (err) {
         console.error("User fetch error:", err.response?.data || err.message);
@@ -40,15 +36,44 @@ export default function Dashboard() {
     fetchUser();
   }, [router]);
 
-   // Set avatar URL when user data is available
+
+  // Modified useEffect for avatar URL
   useEffect(() => {
     if (user && user.avatar && user.avatar.trim() !== '') {
-      const fullAvatarUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`;
-      setAvatarUrl(fullAvatarUrl);
-      console.log("Setting avatar URL:", fullAvatarUrl);
+      const fetchAvatarAsBlob = async () => {
+        try {
+          const fullAvatarUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`;
+
+          // Fetch with no-cors mode to bypass CORS
+          const response = await fetch(fullAvatarUrl, {
+            mode: 'no-cors',
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            setAvatarBlobUrl(blobUrl);
+          } else {
+            console.error("Failed to fetch avatar");
+            setAvatarBlobUrl("");
+          }
+        } catch (error) {
+          console.error("Error fetching avatar as blob:", error);
+          setAvatarBlobUrl("");
+        }
+      };
+
+      fetchAvatarAsBlob();
+
+      // Cleanup blob URL on unmount
+      return () => {
+        if (avatarBlobUrl) {
+          URL.revokeObjectURL(avatarBlobUrl);
+        }
+      };
     } else {
-      setAvatarUrl("");
-      console.log("No avatar found for user:", user);
+      setAvatarBlobUrl("");
     }
   }, [user]);
 
@@ -197,18 +222,18 @@ export default function Dashboard() {
                 <div className="p-6 text-center text-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
 
                   <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
-                    {avatarUrl ? (
+                    {avatarBlobUrl ? (
                       <img
-                        src={avatarUrl}
+                        src={avatarBlobUrl}
                         alt="User Avatar"
                         className="object-cover w-full h-full"
                         onError={(e) => {
-                          console.error("Avatar failed to load:", e.target.src);
+                          console.error("Avatar blob failed to load");
                           e.target.onerror = null;
-                          setAvatarUrl(""); // This will trigger the fallback
+                          setAvatarBlobUrl(""); // This will trigger the fallback
                         }}
                         onLoad={() => {
-                          console.log("Avatar loaded successfully");
+                          console.log("Avatar blob loaded successfully");
                         }}
                       />
                     ) : (
