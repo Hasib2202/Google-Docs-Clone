@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [isLoadingShared, setIsLoadingShared] = useState(true);
   const [previousSharedCount, setPreviousSharedCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [avatarBlobUrl, setAvatarBlobUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const router = useRouter();
   const sharedSectionRef = useRef(null);
 
@@ -37,43 +37,14 @@ export default function Dashboard() {
   }, [router]);
 
 
-  // Modified useEffect for avatar URL
+  // Build avatar URL
   useEffect(() => {
-    if (user && user.avatar && user.avatar.trim() !== '') {
-      const fetchAvatarAsBlob = async () => {
-        try {
-          const fullAvatarUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`;
-
-          // Fetch with no-cors mode to bypass CORS
-          const response = await fetch(fullAvatarUrl, {
-            mode: 'no-cors',
-            credentials: 'include'
-          });
-
-          if (response.ok) {
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            setAvatarBlobUrl(blobUrl);
-          } else {
-            console.error("Failed to fetch avatar");
-            setAvatarBlobUrl("");
-          }
-        } catch (error) {
-          console.error("Error fetching avatar as blob:", error);
-          setAvatarBlobUrl("");
-        }
-      };
-
-      fetchAvatarAsBlob();
-
-      // Cleanup blob URL on unmount
-      return () => {
-        if (avatarBlobUrl) {
-          URL.revokeObjectURL(avatarBlobUrl);
-        }
-      };
+    if (user?.avatar) {
+      setAvatarUrl(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`
+      );
     } else {
-      setAvatarBlobUrl("");
+      setAvatarUrl("");
     }
   }, [user]);
 
@@ -221,25 +192,18 @@ export default function Dashboard() {
               <div className="md:col-span-1">
                 <div className="p-6 text-center text-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
 
-                  <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
-                    {avatarBlobUrl ? (
+                   <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
+                    {avatarUrl ? (
                       <img
-                        src={avatarBlobUrl}
+                        src={avatarUrl}
                         alt="User Avatar"
                         className="object-cover w-full h-full"
-                        onError={(e) => {
-                          console.error("Avatar blob failed to load");
-                          e.target.onerror = null;
-                          setAvatarBlobUrl(""); // This will trigger the fallback
-                        }}
-                        onLoad={() => {
-                          console.log("Avatar blob loaded successfully");
-                        }}
+                        onError={() => setAvatarUrl("")}
                       />
                     ) : (
                       <div className="flex items-center justify-center w-full h-full bg-indigo-400">
                         <span className="text-4xl font-bold text-white">
-                          {user.name.charAt(0)}
+                          {user?.name?.charAt(0) ?? "U"}
                         </span>
                       </div>
                     )}
