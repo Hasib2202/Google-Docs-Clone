@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [isLoadingShared, setIsLoadingShared] = useState(true);
   const [previousSharedCount, setPreviousSharedCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const router = useRouter();
   const sharedSectionRef = useRef(null);
 
@@ -24,6 +25,10 @@ export default function Dashboard() {
         const res = await axios.get(apiUrl, {
           withCredentials: true,
         });
+
+        console.log("User data from API:", res.data);
+        console.log("Avatar field:", res.data.avatar);
+        
         setUser(res.data);
       } catch (err) {
         console.error("User fetch error:", err.response?.data || err.message);
@@ -34,6 +39,18 @@ export default function Dashboard() {
     };
     fetchUser();
   }, [router]);
+
+   // Set avatar URL when user data is available
+  useEffect(() => {
+    if (user && user.avatar && user.avatar.trim() !== '') {
+      const fullAvatarUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${Date.now()}`;
+      setAvatarUrl(fullAvatarUrl);
+      console.log("Setting avatar URL:", fullAvatarUrl);
+    } else {
+      setAvatarUrl("");
+      console.log("No avatar found for user:", user);
+    }
+  }, [user]);
 
   // Fetch shared documents when user is available
   useEffect(() => {
@@ -180,21 +197,18 @@ export default function Dashboard() {
                 <div className="p-6 text-center text-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
 
                   <div className="relative w-32 h-32 mx-auto mb-4 overflow-hidden border-4 rounded-full border-white/30">
-                    {user.avatar ? (
+                    {avatarUrl ? (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${user.avatar}?t=${user.updatedAt}`}
+                        src={avatarUrl}
                         alt="User Avatar"
                         className="object-cover w-full h-full"
-                        crossOrigin="anonymous"
                         onError={(e) => {
+                          console.error("Avatar failed to load:", e.target.src);
                           e.target.onerror = null;
-                          e.target.parentNode.innerHTML = `
-                            <div class="flex items-center justify-center w-full h-full bg-indigo-400">
-                              <span class="text-4xl font-bold text-white">
-                                ${user.name.charAt(0)}
-                              </span>
-                            </div>
-                          `;
+                          setAvatarUrl(""); // This will trigger the fallback
+                        }}
+                        onLoad={() => {
+                          console.log("Avatar loaded successfully");
                         }}
                       />
                     ) : (
